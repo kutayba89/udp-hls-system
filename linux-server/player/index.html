@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UDP → HLS Live Stream Dashboard</title>
-    <script src=\"https://cdn.jsdelivr.net/npm/hls.js@1.5.7\"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7"></script>
     <style>
         :root {
             --bg:       #0b0c10;
@@ -278,64 +278,64 @@
         <h1>▶ UDP → HLS LIVE DASHBOARD</h1>
         <p>Multi-stream transcoder monitor</p>
     </div>
-    <div class=\"server-badge\" id=\"serverBadge\">Connecting...</div>
+    <div class="server-badge" id="serverBadge">Connecting...</div>
 </header>
 
-<div class=\"layout\">
+<div class="layout">
 
     <!-- ── Sidebar ── -->
-    <aside class=\"sidebar\">
-        <div class=\"sidebar-header\">
+    <aside class="sidebar">
+        <div class="sidebar-header">
             <h2>📡 Streams</h2>
-            <button id=\"refreshBtn\" onclick=\"loadStreamList()\">↻ Refresh</button>
+            <button id="refreshBtn" onclick="loadStreamList()">↻ Refresh</button>
         </div>
-        <div class=\"stream-list\" id=\"streamList\">
-            <div style=\"padding:20px; color:var(--muted); font-size:0.8rem; text-align:center;\">
+        <div class="stream-list" id="streamList">
+            <div style="padding:20px; color:var(--muted); font-size:0.8rem; text-align:center;">
                 Loading streams...
             </div>
         </div>
     </aside>
 
     <!-- ── Main ── -->
-    <main class=\"main\" id=\"mainArea\">
-        <div class=\"empty-state\" id=\"emptyState\">
-            <div class=\"icon\">📺</div>
+    <main class="main" id="mainArea">
+        <div class="empty-state" id="emptyState">
+            <div class="icon">📺</div>
             <p>Select a stream from the sidebar to start watching</p>
         </div>
 
-        <div class=\"player-container\" id=\"playerContainer\" style=\"display:none;\">
+        <div class="player-container" id="playerContainer" style="display:none;">
 
-            <div class=\"now-playing\">
-                <span class=\"live-badge\" id=\"liveBadge\">● LIVE</span>
-                <h2 id=\"nowPlayingTitle\">—</h2>
+            <div class="now-playing">
+                <span class="live-badge" id="liveBadge">● LIVE</span>
+                <h2 id="nowPlayingTitle">—</h2>
             </div>
 
-            <div class=\"video-wrapper\">
-                <video id=\"video\" controls autoplay muted playsinline></video>
-                <div class=\"overlay-msg\" id=\"overlayMsg\">
-                    <div class=\"spinner\"></div>
-                    <span id=\"overlayText\">Connecting to stream...</span>
+            <div class="video-wrapper">
+                <video id="video" controls autoplay muted playsinline></video>
+                <div class="overlay-msg" id="overlayMsg">
+                    <div class="spinner"></div>
+                    <span id="overlayText">Connecting to stream...</span>
                 </div>
             </div>
 
-            <div class=\"stats-bar\">
-                <div class=\"stat\"><div class=\"stat-label\">Status</div><div class=\"stat-value\" id=\"statStatus\">—</div></div>
-                <div class=\"stat\"><div class=\"stat-label\">Quality</div><div class=\"stat-value\" id=\"statQuality\">—</div></div>
-                <div class=\"stat\"><div class=\"stat-label\">Buffer</div><div class=\"stat-value\" id=\"statBuffer\">—</div></div>
-                <div class=\"stat\"><div class=\"stat-label\">Latency</div><div class=\"stat-value\" id=\"statLatency\">—</div></div>
-                <div class=\"stat\"><div class=\"stat-label\">Segments</div><div class=\"stat-value\" id=\"statSegments\">—</div></div>
-                <div class=\"stat\"><div class=\"stat-label\">Restarts</div><div class=\"stat-value\" id=\"statRestarts\">0</div></div>
+            <div class="stats-bar">
+                <div class="stat"><div class="stat-label">Status</div><div class="stat-value" id="statStatus">—</div></div>
+                <div class="stat"><div class="stat-label">Quality</div><div class="stat-value" id="statQuality">—</div></div>
+                <div class="stat"><div class="stat-label">Buffer</div><div class="stat-value" id="statBuffer">—</div></div>
+                <div class="stat"><div class="stat-label">Latency</div><div class="stat-value" id="statLatency">—</div></div>
+                <div class="stat"><div class="stat-label">Segments</div><div class="stat-value" id="statSegments">—</div></div>
+                <div class="stat"><div class="stat-label">Restarts</div><div class="stat-value" id="statRestarts">0</div></div>
             </div>
 
-            <div class=\"url-bar\">
+            <div class="url-bar">
                 <label>HLS URL:</label>
-                <input type=\"text\" id=\"urlInput\" readonly />
-                <button onclick=\"copyUrl()\">📋 Copy</button>
-                <button class=\"sec\" onclick=\"toggleMute()\">🔊 Unmute</button>
-                <button class=\"sec\" onclick=\"reloadStream()\">↻ Reload</button>
+                <input type="text" id="urlInput" readonly />
+                <button onclick="copyUrl()">📋 Copy</button>
+                <button class="sec" onclick="toggleMute()">🔊 Unmute</button>
+                <button class="sec" onclick="reloadStream()">↻ Reload</button>
             </div>
 
-            <div class=\"log\" id=\"logPanel\"></div>
+            <div class="log" id="logPanel"></div>
         </div>
     </main>
 
@@ -392,10 +392,10 @@
                 item.dataset.segs    = s.segments;
 
                 item.innerHTML = `
-                    <div class=\"dot ${s.ready ? 'live' : ''}\"></div>
-                    <div class=\"stream-info\">
-                        <div class=\"stream-name\">${s.label}</div>
-                        <div class=\"stream-meta\">port ${s.port} &bull; ${s.segments} segs</div>
+                    <div class="dot ${s.ready ? 'live' : ''}"></div>
+                    <div class="stream-info">
+                        <div class="stream-name">${s.label}</div>
+                        <div class="stream-meta">port ${s.port} &bull; ${s.segments} segs</div>
                     </div>`;
 
                 if (s.ready) {
@@ -412,7 +412,7 @@
         } catch (e) {
             serverBadge.textContent = '🔴 Server Offline';
             serverBadge.style.borderColor = 'var(--red)';
-            streamList.innerHTML = `<div style=\"padding:20px;color:var(--red);font-size:0.8rem;text-align:center;\">
+            streamList.innerHTML = `<div style="padding:20px;color:var(--red);font-size:0.8rem;text-align:center;">
                 ⚠️ Cannot reach server<br><small>${e.message}</small></div>`;
         }
     }

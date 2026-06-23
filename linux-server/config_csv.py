@@ -50,6 +50,8 @@ def load_streams():
             # Per-stream codec overrides. Blank values fall back to global defaults.
             row["video_codec"] = row.get("video_codec") or VIDEO_CODEC
             row["audio_codec"] = row.get("audio_codec") or AUDIO_CODEC
+            row["program_id"] = row.get("program_id") or row.get("service_id") or ""
+            row["input_type"] = row.get("input_type") or "spts"
             streams.append(row)
     return streams
 

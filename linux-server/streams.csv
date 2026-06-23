@@ -1,4 +1,4 @@
-name,label,source_ip,group,port,service_id,on_id,ts_id,video_codec,audio_codec
+name,label,source_ip,group,port,service_id,on_id,ts_id,video_codec,audio_codec,program_id,input_type
 mv_paw_8710,MV PAW,192.168.2.36,239.168.1.9,8710,47101,131,1131
 ut_mrd_4400_r58_8720,UT MRD 4400 R58,192.168.2.36,239.168.1.9,8720,28301,131,1131
 mv_1_hsr_8730,MV 1 HSR,192.168.2.36,239.168.1.9,8730,28101,131,1131
@@ -61,3 +61,16 @@ ind_txt_ut_delay_7830,Ind TXT UT-Delay,192.168.2.230,239.168.1.10,7830,401,10,10
 dw_english_hd_delay_7840,DW English HD [Delay],192.168.2.230,239.168.1.10,7840,3501,1,1
 mv_bmm_all_poweredger320_10444,MV_BMM_All_PowerEdgeR320,192.168.2.103,239.168.1.10,10444,28601,4321,9800
 unnamed_10555,Unnamed 10555,192.168.2.240,239.168.1.10,10555,,35,586
+br_fernsehen_nord_hd_38101,BR Fernsehen Nord HD,,239.168.2.73,5000,38101,38,610,,,38101,mpts
+br_fernsehen_sued_hd_38201,BR Fernsehen Süd HD,,239.168.2.73,5000,38201,38,610,,,38201,mpts
+ndr_fs_hh_hd_38301,NDR FS HH HD,,239.168.2.73,5000,38301,38,610,,,38301,mpts
+ndr_fs_mv_hd_38401,NDR FS MV HD,,239.168.2.73,5000,38401,38,610,,,38401,mpts
+ndr_fs_nds_hd_38501,NDR FS NDS HD,,239.168.2.73,5000,38501,38,610,,,38501,mpts
+ndr_fs_sh_hd_38601,NDR FS SH HD,,239.168.2.73,5000,38601,38,610,,,38601,mpts
+phoenix_hd_38701,phoenix HD,,239.168.2.73,5000,38701,38,610,,,38701,mpts
+tagesschau24_hd_39101,tagesschau24 HD,,239.168.2.74,5000,39101,39,618,,,39101,mpts
+one_hd_39201,ONE HD,,239.168.2.74,5000,39201,39,618,,,39201,mpts
+ard_alpha_hd_39301,ARD alpha HD,,239.168.2.74,5000,39301,39,618,,,39301,mpts
+radio_bremen_hd_39401,Radio Bremen HD,,239.168.2.74,5000,39401,39,618,,,39401,mpts
+sr_fernsehen_hd_39501,SR Fernsehen HD,,239.168.2.74,5000,39501,39,618,,,39501,mpts
+wdr_hd_koeln_39601,WDR HD Köln,,239.168.2.74,5000,39601,39,618,,,39601,mpts

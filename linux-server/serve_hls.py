@@ -38,7 +38,7 @@ class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
         path = self.path.split("?")[0]  # strip query string
 
         if path == "/" or path == "/index.html":
-            self._serve_file(os.path.join(os.path.dirname(__file__), "player", "index.html"))
+            self._serve_file(os.path.join(os.path.dirname(__file__), "player", "index.html"), no_cache=True)
 
         elif path == "/api/streams":
             self._serve_streams_api()
@@ -47,7 +47,7 @@ class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
             self._serve_hls(path)
 
         elif path.startswith("/player/"):
-            self._serve_file(os.path.join(os.path.dirname(__file__), path.lstrip("/")))
+            self._serve_file(os.path.join(os.path.dirname(__file__), path.lstrip("/")), no_cache=True)
 
         else:
             self._send_404()
@@ -91,8 +91,12 @@ class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
                 "ts_id":       s.get("ts_id", ""),
                 "video_codec": s.get("video_codec", ""),
                 "audio_codec": s.get("audio_codec", ""),
+                "program_id":  s.get("program_id", ""),
+                "input_type":  s.get("input_type", ""),
                 "ready":       ready,
-                "hls_url":    f"http://{SERVER_IP}:{HTTP_PORT}/hls/{name}/stream.m3u8",
+                # Relative URL works through localhost, reverse proxies, SSH tunnels,
+                # and any hostname/IP the dashboard was opened with.
+                "hls_url":    f"/hls/{name}/stream.m3u8",
                 "segments":   len([f for f in os.listdir(out_dir) if f.endswith(".ts")]) if os.path.isdir(out_dir) else 0,
             })
 
@@ -100,6 +104,9 @@ class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self._cors_headers()
         self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

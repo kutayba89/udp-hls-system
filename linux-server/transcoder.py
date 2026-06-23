@@ -85,6 +85,8 @@ def build_ffmpeg_cmd(stream: dict) -> list:
     source_ip   = stream.get("source_ip", "")
     video_codec = stream.get("video_codec") or VIDEO_CODEC
     audio_codec = stream.get("audio_codec") or AUDIO_CODEC
+    program_id  = stream.get("program_id") or stream.get("service_id") or ""
+    input_type  = (stream.get("input_type") or "spts").lower()
 
     out_dir      = os.path.join(HLS_BASE_DIR, name)
     playlist     = os.path.join(out_dir, "stream.m3u8")
@@ -114,12 +116,18 @@ def build_ffmpeg_cmd(stream: dict) -> list:
         "-fflags",    "+genpts+discardcorrupt",
         "-re",
         "-i",         udp_url,
+    ]
 
-        # ── Stream mapping ─────────────────────────────────────────
-        # MPEG-TS inputs often contain extra data/subtitle PIDs. Map only first video
-        # and optional first audio so problematic PIDs cannot block HLS output.
-        "-map",       "0:v:0",
-        "-map",       "0:a:0?",
+    # ── Stream mapping ─────────────────────────────────────────────
+    # SPTS: map first video and optional first audio.
+    # MPTS: map the configured DVB/MPEG-TS service/program ID.
+    if input_type == "mpts" and program_id:
+        cmd += ["-map", f"p:{program_id}"]
+    else:
+        cmd += ["-map", "0:v:0", "-map", "0:a:0?"]
+
+    # Drop subtitles/data PIDs from HLS output.
+    cmd += [
         "-sn",
         "-dn",
 
