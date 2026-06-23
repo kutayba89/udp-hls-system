@@ -114,6 +114,8 @@ def build_ffmpeg_cmd(stream: dict) -> list:
 
         # ── Input ──────────────────────────────────────────────────
         "-fflags",    "+genpts+discardcorrupt",
+        "-analyzeduration", "20000000",
+        "-probesize",       "20000000",
         "-re",
         "-i",         udp_url,
     ]
@@ -122,12 +124,16 @@ def build_ffmpeg_cmd(stream: dict) -> list:
     # SPTS: map first video and optional first audio.
     # MPTS: map the configured DVB/MPEG-TS service/program ID.
     if input_type == "mpts" and program_id:
-        cmd += ["-map", f"p:{program_id}"]
+        # Map only video/audio from the selected DVB/MPEG-TS program.
+        # Do NOT map the whole program, because MPTS programs often include
+        # teletext/data/unknown PIDs that HLS cannot mux.
+        cmd += ["-map", f"0:p:{program_id}:v:0", "-map", f"0:p:{program_id}:a:0?"]
     else:
-        cmd += ["-map", "0:v:0", "-map", "0:a:0?"]
+        cmd += ["-map", "0:v:0?", "-map", "0:a:0?"]
 
-    # Drop subtitles/data PIDs from HLS output.
+    # Drop subtitles/data/unknown PIDs from HLS output.
     cmd += [
+        "-ignore_unknown",
         "-sn",
         "-dn",
 

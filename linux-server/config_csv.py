@@ -17,6 +17,13 @@ MULTICAST_GROUP = "239.168.1.10"  # fallback only
 # If any stream fails, set this False and restart.
 USE_SOURCE_FILTER = True
 
+# Safety switch: MPTS services are kept in streams.csv but disabled by default.
+# Enable only after testing selected services, because each service starts an FFmpeg.
+LOAD_MPTS_STREAMS = False
+
+# Optional emergency disable list for bad/empty/problematic streams.
+DISABLED_STREAMS = set()
+
 # ─── FFmpeg Transcoding Settings ──────────────────────────────────────────────
 VIDEO_CODEC = "copy"       # fastest: remux only
 AUDIO_CODEC = "aac"        # use "copy" if source audio is already HLS-compatible
@@ -52,6 +59,16 @@ def load_streams():
             row["audio_codec"] = row.get("audio_codec") or AUDIO_CODEC
             row["program_id"] = row.get("program_id") or row.get("service_id") or ""
             row["input_type"] = row.get("input_type") or "spts"
+
+            enabled = (row.get("enabled") or "").strip().lower()
+            explicitly_enabled = enabled in {"1", "true", "yes", "on"}
+            explicitly_disabled = enabled in {"0", "false", "no", "off"}
+
+            if row["name"] in DISABLED_STREAMS or explicitly_disabled:
+                continue
+            if row["input_type"].lower() == "mpts" and not (LOAD_MPTS_STREAMS or explicitly_enabled):
+                continue
+
             streams.append(row)
     return streams
 
