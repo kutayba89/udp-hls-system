@@ -1,0 +1,12 @@
+# Force LF line endings for Linux scripts
+*.py    text eol=lf
+*.sh    text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.txt   text eol=lf
+
+# Binary files
+*.zip   binary
+*.ts    binary
+*.png   binary

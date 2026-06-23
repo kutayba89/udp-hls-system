@@ -26,10 +26,11 @@ import argparse
 import threading
 import logging
 from datetime import datetime
-from config import (
+from config_csv import (
     MULTICAST_GROUP,
     MULTICAST_INTERFACE,
     STREAMS,
+    USE_SOURCE_FILTER,
     VIDEO_CODEC,
     AUDIO_CODEC,
     VIDEO_BITRATE,
@@ -78,8 +79,10 @@ def build_ffmpeg_cmd(stream: dict) -> list:
     The 'localaddr' parameter tells FFmpeg which interface to join the
     multicast group on — critical on multi-homed Linux servers.
     """
-    name   = stream["name"]
-    port   = stream["port"]
+    name      = stream["name"]
+    port      = stream["port"]
+    group     = stream.get("group") or MULTICAST_GROUP
+    source_ip = stream.get("source_ip", "")
 
     out_dir      = os.path.join(HLS_BASE_DIR, name)
     playlist     = os.path.join(out_dir, "stream.m3u8")
@@ -87,14 +90,17 @@ def build_ffmpeg_cmd(stream: dict) -> list:
 
     ensure_dir(out_dir)
 
-    # UDP multicast input with interface binding
+    # UDP multicast input with interface binding.
+    # localaddr is the LOCAL NIC IP. sources filters by sender IP when enabled.
     udp_url = (
-        f"udp://@{MULTICAST_GROUP}:{port}"
+        f"udp://@{group}:{port}"
         f"?localaddr={MULTICAST_INTERFACE}"
         f"&overrun_nonfatal=1"
         f"&fifo_size=50000000"
         f"&buffer_size=65536"
     )
+    if USE_SOURCE_FILTER and source_ip:
+        udp_url += f"&sources={source_ip}"
 
     cmd = [
         "ffmpeg",
@@ -303,7 +309,7 @@ def main():
     print("  UDP → HLS MULTI-STREAM TRANSCODER")
     print("  Linux Production Server")
     print("=" * 60)
-    print(f"  Multicast group  : {MULTICAST_GROUP}")
+    print(f"  Default group    : {MULTICAST_GROUP}")
     print(f"  Interface        : {MULTICAST_INTERFACE}")
     print(f"  HLS output dir   : {HLS_BASE_DIR}")
     print(f"  Streams to start : {len(streams_to_run)}")
@@ -354,4 +360,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-"""

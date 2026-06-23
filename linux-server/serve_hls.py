@@ -18,7 +18,7 @@ import os
 import sys
 import json
 import threading
-from config import HTTP_HOST, HTTP_PORT, HLS_BASE_DIR, STREAMS, SERVER_IP
+from config_csv import HTTP_HOST, HTTP_PORT, HLS_BASE_DIR, STREAMS, SERVER_IP
 
 
 class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -81,12 +81,17 @@ class HLSRequestHandler(http.server.BaseHTTPRequestHandler):
             ready    = os.path.exists(playlist)
 
             data.append({
-                "name":     name,
-                "label":    s["label"],
-                "port":     s["port"],
-                "ready":    ready,
-                "hls_url":  f"http://{SERVER_IP}:{HTTP_PORT}/hls/{name}/stream.m3u8",
-                "segments": len([f for f in os.listdir(out_dir) if f.endswith(".ts")]) if os.path.isdir(out_dir) else 0,
+                "name":       name,
+                "label":      s["label"],
+                "source_ip":  s.get("source_ip", ""),
+                "group":      s.get("group", ""),
+                "port":       s["port"],
+                "service_id": s.get("service_id", ""),
+                "on_id":      s.get("on_id", ""),
+                "ts_id":      s.get("ts_id", ""),
+                "ready":      ready,
+                "hls_url":    f"http://{SERVER_IP}:{HTTP_PORT}/hls/{name}/stream.m3u8",
+                "segments":   len([f for f in os.listdir(out_dir) if f.endswith(".ts")]) if os.path.isdir(out_dir) else 0,
             })
 
         body = json.dumps(data, indent=2).encode("utf-8")
@@ -174,4 +179,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-"""
