@@ -1,0 +1,573 @@
+"<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>UDP → HLS Live Stream Dashboard</title>
+    <script src=\"https://cdn.jsdelivr.net/npm/hls.js@1.5.7\"></script>
+    <style>
+        :root {
+            --bg:       #0b0c10;
+            --surface:  #1a1c24;
+            --border:   #2a2d3a;
+            --accent:   #e94560;
+            --accent2:  #0f3460;
+            --text:     #d0d3e0;
+            --muted:    #666a7e;
+            --green:    #2ecc71;
+            --yellow:   #f39c12;
+            --red:      #e74c3c;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: linear-gradient(135deg, #0f1117, var(--accent2));
+            border-bottom: 2px solid var(--accent);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        header h1 { font-size: 1.4rem; font-weight: 400; letter-spacing: 2px; color: var(--accent); }
+        header p  { font-size: 0.8rem; color: var(--muted); }
+
+        .server-badge {
+            background: var(--accent2);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            color: var(--text);
+        }
+
+        /* ── Layout ── */
+        .layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-header h2 { font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+
+        #refreshBtn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        #refreshBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .stream-list { padding: 8px; }
+
+        .stream-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            margin-bottom: 4px;
+        }
+        .stream-item:hover  { background: rgba(233,69,96,0.08); border-color: var(--border); }
+        .stream-item.active { background: rgba(233,69,96,0.15); border-color: var(--accent); }
+        .stream-item.inactive { opacity: 0.5; cursor: not-allowed; }
+
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--muted);
+        }
+        .dot.live    { background: var(--green); animation: pulse 1.5s infinite; }
+        .dot.loading { background: var(--yellow); }
+        .dot.error   { background: var(--red); }
+
+        @keyframes pulse {
+            0%,100% { opacity:1; } 50% { opacity:0.3; }
+        }
+
+        .stream-info { flex: 1; min-width: 0; }
+        .stream-name  { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stream-meta  { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+        /* ── Main Player Area ── */
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .player-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 16px;
+        }
+
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .now-playing .live-badge {
+            background: var(--accent);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            display: none;
+        }
+        .now-playing .live-badge.visible { display: inline-block; animation: pulse 1.5s infinite; }
+        .now-playing h2 { font-size: 1.1rem; font-weight: 400; }
+
+        .video-wrapper {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+            max-height: 60vh;
+            background: #000;
+        }
+
+        .overlay-msg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.7);
+            font-size: 1rem;
+            color: var(--muted);
+            gap: 12px;
+        }
+        .overlay-msg.hidden { display: none; }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Stats bar ── */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            min-width: 100px;
+        }
+        .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 1rem; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+        /* ── URL bar ── */
+        .url-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+        .url-bar label { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+        .url-bar input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+        }
+        .url-bar button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .url-bar button:hover { background: #ff6b81; }
+        .url-bar button.sec { background: var(--border); }
+        .url-bar button.sec:hover { background: #3a3d4a; }
+
+        /* ── Log ── */
+        .log {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            height: 120px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+        .log .e { color: var(--red); }
+        .log .s { color: var(--green); }
+        .log .i { color: #5dade2; }
+
+        /* ── No stream selected ── */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 4rem; }
+        .empty-state p { font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>▶ UDP → HLS LIVE DASHBOARD</h1>
+        <p>Multi-stream transcoder monitor</p>
+    </div>
+    <div class=\"server-badge\" id=\"serverBadge\">Connecting...</div>
+</header>
+
+<div class=\"layout\">
+
+    <!-- ── Sidebar ── -->
+    <aside class=\"sidebar\">
+        <div class=\"sidebar-header\">
+            <h2>📡 Streams</h2>
+            <button id=\"refreshBtn\" onclick=\"loadStreamList()\">↻ Refresh</button>
+        </div>
+        <div class=\"stream-list\" id=\"streamList\">
+            <div style=\"padding:20px; color:var(--muted); font-size:0.8rem; text-align:center;\">
+                Loading streams...
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class=\"main\" id=\"mainArea\">
+        <div class=\"empty-state\" id=\"emptyState\">
+            <div class=\"icon\">📺</div>
+            <p>Select a stream from the sidebar to start watching</p>
+        </div>
+
+        <div class=\"player-container\" id=\"playerContainer\" style=\"display:none;\">
+
+            <div class=\"now-playing\">
+                <span class=\"live-badge\" id=\"liveBadge\">● LIVE</span>
+                <h2 id=\"nowPlayingTitle\">—</h2>
+            </div>
+
+            <div class=\"video-wrapper\">
+                <video id=\"video\" controls autoplay muted playsinline></video>
+                <div class=\"overlay-msg\" id=\"overlayMsg\">
+                    <div class=\"spinner\"></div>
+                    <span id=\"overlayText\">Connecting to stream...</span>
+                </div>
+            </div>
+
+            <div class=\"stats-bar\">
+                <div class=\"stat\"><div class=\"stat-label\">Status</div><div class=\"stat-value\" id=\"statStatus\">—</div></div>
+                <div class=\"stat\"><div class=\"stat-label\">Quality</div><div class=\"stat-value\" id=\"statQuality\">—</div></div>
+                <div class=\"stat\"><div class=\"stat-label\">Buffer</div><div class=\"stat-value\" id=\"statBuffer\">—</div></div>
+                <div class=\"stat\"><div class=\"stat-label\">Latency</div><div class=\"stat-value\" id=\"statLatency\">—</div></div>
+                <div class=\"stat\"><div class=\"stat-label\">Segments</div><div class=\"stat-value\" id=\"statSegments\">—</div></div>
+                <div class=\"stat\"><div class=\"stat-label\">Restarts</div><div class=\"stat-value\" id=\"statRestarts\">0</div></div>
+            </div>
+
+            <div class=\"url-bar\">
+                <label>HLS URL:</label>
+                <input type=\"text\" id=\"urlInput\" readonly />
+                <button onclick=\"copyUrl()\">📋 Copy</button>
+                <button class=\"sec\" onclick=\"toggleMute()\">🔊 Unmute</button>
+                <button class=\"sec\" onclick=\"reloadStream()\">↻ Reload</button>
+            </div>
+
+            <div class=\"log\" id=\"logPanel\"></div>
+        </div>
+    </main>
+
+</div>
+
+<script>
+    // ── Config ──────────────────────────────────────────────────────
+    const API_URL = '/api/streams';
+    let hls = null;
+    let currentStream = null;
+    let restartCount = 0;
+    let statsInterval = null;
+
+    // ── DOM refs ────────────────────────────────────────────────────
+    const video           = document.getElementById('video');
+    const streamList      = document.getElementById('streamList');
+    const emptyState      = document.getElementById('emptyState');
+    const playerContainer = document.getElementById('playerContainer');
+    const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+    const liveBadge       = document.getElementById('liveBadge');
+    const overlayMsg      = document.getElementById('overlayMsg');
+    const overlayText     = document.getElementById('overlayText');
+    const urlInput        = document.getElementById('urlInput');
+    const logPanel        = document.getElementById('logPanel');
+    const serverBadge     = document.getElementById('serverBadge');
+
+    // ── Logging ─────────────────────────────────────────────────────
+    function log(msg, type = '') {
+        const el = document.createElement('div');
+        el.className = type;
+        el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logPanel.appendChild(el);
+        logPanel.scrollTop = logPanel.scrollHeight;
+        while (logPanel.children.length > 200) logPanel.removeChild(logPanel.firstChild);
+    }
+
+    // ── Load stream list from API ────────────────────────────────────
+    async function loadStreamList() {
+        try {
+            const res  = await fetch(API_URL);
+            const data = await res.json();
+
+            serverBadge.textContent = `🟢 Server Online — ${data.length} streams`;
+            serverBadge.style.borderColor = 'var(--green)';
+
+            streamList.innerHTML = '';
+            data.forEach(s => {
+                const item = document.createElement('div');
+                item.className = `stream-item ${s.ready ? '' : 'inactive'}`;
+                item.dataset.name    = s.name;
+                item.dataset.hlsUrl  = s.hls_url;
+                item.dataset.label   = s.label;
+                item.dataset.ready   = s.ready;
+                item.dataset.segs    = s.segments;
+
+                item.innerHTML = `
+                    <div class=\"dot ${s.ready ? 'live' : ''}\"></div>
+                    <div class=\"stream-info\">
+                        <div class=\"stream-name\">${s.label}</div>
+                        <div class=\"stream-meta\">port ${s.port} &bull; ${s.segments} segs</div>
+                    </div>`;
+
+                if (s.ready) {
+                    item.onclick = () => playStream(s.name, s.hls_url, s.label);
+                }
+
+                // Highlight active
+                if (currentStream && currentStream.name === s.name) {
+                    item.classList.add('active');
+                }
+
+                streamList.appendChild(item);
+            });
+        } catch (e) {
+            serverBadge.textContent = '🔴 Server Offline';
+            serverBadge.style.borderColor = 'var(--red)';
+            streamList.innerHTML = `<div style=\"padding:20px;color:var(--red);font-size:0.8rem;text-align:center;\">
+                ⚠️ Cannot reach server<br><small>${e.message}</small></div>`;
+        }
+    }
+
+    // ── Play a stream ───────────────────────────────────────────────
+    function playStream(name, hlsUrl, label) {
+        currentStream = { name, hlsUrl, label };
+        restartCount  = 0;
+
+        // Update sidebar highlight
+        document.querySelectorAll('.stream-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.name === name);
+        });
+
+        // Show player
+        emptyState.style.display      = 'none';
+        playerContainer.style.display = 'flex';
+
+        nowPlayingTitle.textContent = label;
+        urlInput.value = hlsUrl;
+        liveBadge.classList.remove('visible');
+        document.getElementById('statRestarts').textContent = '0';
+
+        showOverlay('Connecting to stream...');
+        log(`Loading: ${label}`, 'i');
+        log(`URL: ${hlsUrl}`, 'i');
+
+        loadHLS(hlsUrl);
+    }
+
+    // ── HLS.js loader ───────────────────────────────────────────────
+    function loadHLS(url) {
+        if (hls) { hls.destroy(); hls = null; }
+
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 30,
+                maxBufferLength: 10,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 6,
+                liveDurationInfinity: true,
+                manifestLoadingTimeOut: 15000,
+                manifestLoadingMaxRetry: 20,
+                manifestLoadingRetryDelay: 2000,
+                levelLoadingTimeOut: 15000,
+                levelLoadingMaxRetry: 20,
+                fragLoadingTimeOut: 20000,
+                fragLoadingMaxRetry: 10,
+            });
+
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
+                log(`✅ Manifest loaded — ${data.levels.length} level(s)`, 's');
+                hideOverlay();
+                liveBadge.classList.add('visible');
+                document.getElementById('statStatus').textContent = 'Live';
+                video.play().catch(() => {});
+            });
+
+            hls.on(Hls.Events.LEVEL_LOADED, (e, data) => {
+                document.getElementById('statSegments').textContent =
+                    data.details.fragments.length;
+            });
+
+            hls.on(Hls.Events.ERROR, (e, data) => {
+                if (!data.fatal) return;
+                log(`⚠️ ${data.type}: ${data.details}`, 'e');
+                restartCount++;
+                document.getElementById('statRestarts').textContent = restartCount;
+                document.getElementById('statStatus').textContent = 'Retrying...';
+
+                showOverlay(`Error — retrying... (${restartCount})`);
+
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    setTimeout(() => { if (hls) hls.startLoad(); }, 3000);
+                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                    hls.recoverMediaError();
+                } else {
+                    setTimeout(() => loadHLS(url), 5000);
+                }
+            });
+
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.addEventListener('loadedmetadata', () => {
+                hideOverlay();
+                liveBadge.classList.add('visible');
+                video.play().catch(() => {});
+            });
+        } else {
+            showOverlay('HLS not supported in this browser');
+            log('HLS not supported!', 'e');
+        }
+    }
+
+    // ── UI helpers ──────────────────────────────────────────────────
+    function showOverlay(msg) {
+        overlayMsg.classList.remove('hidden');
+        overlayText.textContent = msg;
+    }
+    function hideOverlay() {
+        overlayMsg.classList.add('hidden');
+    }
+
+    function toggleMute() {
+        video.muted = !video.muted;
+        event.target.textContent = video.muted ? '🔊 Unmute' : '🔇 Mute';
+    }
+
+    function reloadStream() {
+        if (currentStream) {
+            log('Reloading stream...', 'i');
+            loadHLS(currentStream.hlsUrl);
+        }
+    }
+
+    function copyUrl() {
+        navigator.clipboard.writeText(urlInput.value)
+            .then(() => log('URL copied to clipboard', 's'))
+            .catch(() => log('Copy failed', 'e'));
+    }
+
+    // ── Stats updater ───────────────────────────────────────────────
+    setInterval(() => {
+        if (!hls || !video) return;
+
+        if (video.buffered.length > 0) {
+            const buf = video.buffered.end(video.buffered.length - 1) - video.currentTime;
+            document.getElementById('statBuffer').textContent = buf.toFixed(1) + 's';
+        }
+
+        if (hls.currentLevel >= 0 && hls.levels[hls.currentLevel]) {
+            const lv = hls.levels[hls.currentLevel];
+            document.getElementById('statQuality').textContent =
+                lv.width ? `${lv.width}×${lv.height}` : `Level ${hls.currentLevel}`;
+        }
+
+        if (hls.latency !== undefined) {
+            document.getElementById('statLatency').textContent =
+                hls.latency.toFixed(1) + 's';
+        }
+    }, 1000);
+
+    // ── Auto-refresh stream list every 15s ──────────────────────────
+    setInterval(loadStreamList, 15000);
+
+    // ── Init ────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+        loadStreamList();
+    });
+</script>
+</body>
+</html>"

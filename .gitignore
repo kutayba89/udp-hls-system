@@ -1,0 +1,36 @@
+# HLS output segments and playlists
+hls_output/
+/var/www/hls/
+
+# Logs
+*.log
+/var/log/udp-hls/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp files
+*.tmp
+ffprobe_err.txt
+/tmp/udp-hls*.log
+/tmp/udp-hls.pids
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
