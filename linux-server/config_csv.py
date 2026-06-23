@@ -32,7 +32,7 @@ HLS_SEGMENT_PATTERN = "seg_%05d.ts"
 
 # ─── HTTP Server Settings ─────────────────────────────────────────────────────
 HTTP_HOST = "0.0.0.0"
-HTTP_PORT = 8080
+HTTP_PORT = 8090
 
 # ─── Process Settings ─────────────────────────────────────────────────────────
 LOG_DIR = "/var/log/udp-hls"
