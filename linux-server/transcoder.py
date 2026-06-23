@@ -79,10 +79,12 @@ def build_ffmpeg_cmd(stream: dict) -> list:
     The 'localaddr' parameter tells FFmpeg which interface to join the
     multicast group on — critical on multi-homed Linux servers.
     """
-    name      = stream["name"]
-    port      = stream["port"]
-    group     = stream.get("group") or MULTICAST_GROUP
-    source_ip = stream.get("source_ip", "")
+    name        = stream["name"]
+    port        = stream["port"]
+    group       = stream.get("group") or MULTICAST_GROUP
+    source_ip   = stream.get("source_ip", "")
+    video_codec = stream.get("video_codec") or VIDEO_CODEC
+    audio_codec = stream.get("audio_codec") or AUDIO_CODEC
 
     out_dir      = os.path.join(HLS_BASE_DIR, name)
     playlist     = os.path.join(out_dir, "stream.m3u8")
@@ -113,12 +115,20 @@ def build_ffmpeg_cmd(stream: dict) -> list:
         "-re",
         "-i",         udp_url,
 
+        # ── Stream mapping ─────────────────────────────────────────
+        # MPEG-TS inputs often contain extra data/subtitle PIDs. Map only first video
+        # and optional first audio so problematic PIDs cannot block HLS output.
+        "-map",       "0:v:0",
+        "-map",       "0:a:0?",
+        "-sn",
+        "-dn",
+
         # ── Video ──────────────────────────────────────────────────
-        "-c:v",       VIDEO_CODEC,
+        "-c:v",       video_codec,
     ]
 
     # Only add encoding params if we're re-encoding
-    if VIDEO_CODEC != "copy":
+    if video_codec != "copy":
         cmd += [
             "-preset",    "veryfast",
             "-tune",      "zerolatency",
@@ -128,11 +138,12 @@ def build_ffmpeg_cmd(stream: dict) -> list:
             "-pix_fmt",   "yuv420p",
             "-g",         "60",
             "-sc_threshold", "0",
+            "-force_key_frames", f"expr:gte(t,n_forced*{HLS_SEGMENT_SECONDS})",
         ]
 
     # ── Audio ──────────────────────────────────────────────────────
-    cmd += ["-c:a", AUDIO_CODEC]
-    if AUDIO_CODEC != "copy":
+    cmd += ["-c:a", audio_codec]
+    if audio_codec != "copy":
         cmd += [
             "-b:a", AUDIO_BITRATE,
             "-ar",  str(AUDIO_SAMPLE_RATE),
@@ -342,8 +353,8 @@ def main():
         time.sleep(0.3)   # Small stagger to avoid thundering herd
 
     log.info(f"All {len(_workers)} stream workers launched.")
-    log.info(f"HLS streams available at: http://192.168.90.116:8080/hls/{{name}}/stream.m3u8")
-    log.info(f"Web player at:            http://192.168.90.116:8080/")
+    log.info(f"HLS streams available at: http://192.168.90.116:8090/hls/{{name}}/stream.m3u8")
+    log.info(f"Web player at:            http://192.168.90.116:8090/")
     log.info("Press Ctrl+C to stop all streams.\n")
 
     # ── Start status monitor ───────────────────────────────────────

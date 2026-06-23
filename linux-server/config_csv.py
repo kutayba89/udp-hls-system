@@ -47,6 +47,9 @@ def load_streams():
         reader = csv.DictReader(f)
         for row in reader:
             row["port"] = int(row["port"])
+            # Per-stream codec overrides. Blank values fall back to global defaults.
+            row["video_codec"] = row.get("video_codec") or VIDEO_CODEC
+            row["audio_codec"] = row.get("audio_codec") or AUDIO_CODEC
             streams.append(row)
     return streams
 
